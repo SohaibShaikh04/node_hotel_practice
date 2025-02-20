@@ -1,2 +1,3 @@
 #  Adding all the files that are need to be igmored while adding it to the git
  node_modules/
+ .env
