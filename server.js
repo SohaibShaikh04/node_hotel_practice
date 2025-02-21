@@ -3,14 +3,49 @@ const db = require('./db');
 const app = express();
 const bodyParser = require('body-parser');
 require('dotenv').config();
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+
 app.use(bodyParser.json()); 
+app.use(passport.inititalize());
+app.use(new LocalStrategy)(async (USERNAME,password,done) => {
+  //authentication logic here 
+  try{
+     console.log('Recieved credentials:', USERNAME , password);
+     const user = Person.findOne({username:USERNAME});
+     if(!user){
+      return done(null,false,{message:'Incorrect username'});
+     }
+
+     const isPasswordMatch = user.password === password ? true : false;
+     if(isPasswordMatch){
+             return done(null,user);
+     }else{
+      return done(null,false,{message:'Incorrect password'});
+     }
+   }
+   catch(err){
+   return done(err);
+   }
+})
+
+
 const PORT = process.env.PORT || 3000
+
+// Middleware Function
+const logRequest = (req,res,next) => {
+  console.log(`[${new Date().toLocaleString()}] Request Made to : ${req.originalUrl}`);
+  next(); //Move to the next phase
+}
 
 
 const Person = require('./models/Person');
 const Menu = require('./models/Menu');
 
-app.get('/', function (req, res) {
+
+app.use(logRequest); //Line used to tell express to use middleware for every endpoint
+
+app.get('/' , function (req, res) {
     res.send('Welcome to my server....Its Sohaib ka server, mere paas bohot options hai');
 });
 
