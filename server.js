@@ -3,54 +3,26 @@ const db = require('./db');
 const app = express();
 const bodyParser = require('body-parser');
 require('dotenv').config();
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-
-app.use(bodyParser.json()); 
-app.use(passport.inititalize());
-app.use(new LocalStrategy)(async (USERNAME,password,done) => {
-  //authentication logic here 
-  try{
-     console.log('Recieved credentials:', USERNAME , password);
-     const user = Person.findOne({username:USERNAME});
-     if(!user){
-      return done(null,false,{message:'Incorrect username'});
-     }
-
-     const isPasswordMatch = user.password === password ? true : false;
-     if(isPasswordMatch){
-             return done(null,user);
-     }else{
-      return done(null,false,{message:'Incorrect password'});
-     }
-   }
-   catch(err){
-   return done(err);
-   }
-})
-
-
-const PORT = process.env.PORT || 3000
-
-// Middleware Function
-const logRequest = (req,res,next) => {
-  console.log(`[${new Date().toLocaleString()}] Request Made to : ${req.originalUrl}`);
-  next(); //Move to the next phase
-}
-
-
-const Person = require('./models/Person');
+const passport = require('./auth')
 const Menu = require('./models/Menu');
 
+app.use(bodyParser.json()); 
+app.use(passport.initialize());
+const PORT = process.env.PORT || 3000;
 
-app.use(logRequest); //Line used to tell express to use middleware for every endpoint
+const logRequest = (req, res, next) => {
+  console.log(`[${new Date().toLocaleString()}] Request Made to : ${req.originalUrl}`);
+  next();
+};
 
-app.get('/' , function (req, res) {
-    res.send('Welcome to my server....Its Sohaib ka server, mere paas bohot options hai');
+app.use(logRequest);
+
+app.get('/', function (req, res) {
+  res.send('Welcome to my server....Its Sohaib ka server, mere paas bohot options hai');
 });
 
-// **Corrected: Get all persons**
-app.get('/person', async (req, res) => {
+const localAuthMiddleware = passport.authenticate('local',{session: false})
+app.get('/person',async (req, res) => {
   try {
     const data = await Person.find();
     console.log('Data fetched');
@@ -61,8 +33,7 @@ app.get('/person', async (req, res) => {
   }
 });
 
-// **Corrected: Get specific person by work type**
-app.get('/person/:workType', async (req, res) => {
+app.get('/person/:workType', localAuthMiddleware,async (req, res) => {
   const workType = req.params.workType;
   try {
     if (['chef', 'manager', 'waiter'].includes(workType)) {
@@ -78,7 +49,6 @@ app.get('/person/:workType', async (req, res) => {
   }
 });
 
-// **Corrected: Post a person**
 app.post('/person', async (req, res) => {
   try {
     const data = req.body;
@@ -92,7 +62,6 @@ app.post('/person', async (req, res) => {
   }
 });
 
-// **Corrected: Get all menu items**
 app.get('/menu', async (req, res) => {
   try {
     const data = await Menu.find();
@@ -104,8 +73,7 @@ app.get('/menu', async (req, res) => {
   }
 });
 
-// **Corrected: Post a menu**
-app.post('/menu', async (req, res) => {
+app.post('/menu',localAuthMiddleware, async (req, res) => {
   try {
     const data = req.body;
     const newMenu = new Menu(data);
@@ -118,17 +86,11 @@ app.post('/menu', async (req, res) => {
   }
 });
 
-//Import the roy=uter files
-const personRoutes=require('./routes/personRoutes')
-const menu=require('./routes/menuRoutes')
-// use the routers
+const personRoutes = require('./routes/personRoutes');
+const menuRoutes = require('./routes/menuRoutes');
 app.use('/person',personRoutes);
-app.use('/menu',menu);
+app.use('/menu',localAuthMiddleware, menuRoutes);
 
-// **Start the server**
 app.listen(2000, () => {
   console.log("Listening on port 2000");
 });
-
-
-
