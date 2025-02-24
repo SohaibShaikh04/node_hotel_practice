@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 const passport = require('./auth')
 const Menu = require('./models/Menu');
-
+const Person = require('./models/Person')
 app.use(bodyParser.json()); 
 app.use(passport.initialize());
 const PORT = process.env.PORT || 3000;
@@ -22,7 +22,7 @@ app.get('/', function (req, res) {
 });
 
 const localAuthMiddleware = passport.authenticate('local',{session: false})
-app.get('/person',async (req, res) => {
+app.get('/person',localAuthMiddleware,async (req, res) => {
   try {
     const data = await Person.find();
     console.log('Data fetched');
